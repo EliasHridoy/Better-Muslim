@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "939733210624",
+    "project_id": "better-muslim-2",
+    "storage_bucket": "better-muslim-2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:939733210624:android:802b7b9e3e76d9ebc5eae5",
+        "android_client_info": {
+          "package_name": "com.bettermuslim.better_muslim"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_qzcOUYn_ATkh3Ubuuwh_u2L9uX0vNuc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
