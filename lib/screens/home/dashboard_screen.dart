@@ -657,7 +657,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (badgeWidget != null) badgeWidget,
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 24),
             Text(
               title,
               style: const TextStyle(

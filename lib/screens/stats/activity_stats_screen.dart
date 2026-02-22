@@ -179,52 +179,61 @@ class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
 
   Widget _buildSummaryRow(
       BuildContext context, TaskProvider provider, bool isDark) {
-    return Row(
+    return Column(
       children: [
-        _buildSummaryCard(
-          context,
-          title: 'Total Sawab',
-          value: '${provider.totalPoints}',
-          icon: Icons.diamond,
-          color: AppColors.accent,
-          isDark: isDark,
+        Row(
+          children: [
+            _buildSummaryCard(
+              context,
+              title: 'Total Sawab',
+              value: '${provider.totalPoints}',
+              icon: Icons.diamond,
+              color: AppColors.accent,
+              isDark: isDark,
+            ),
+            const SizedBox(width: 12),
+            _buildSummaryCard(
+              context,
+              title: 'Streak',
+              value: '${provider.streak}d',
+              icon: Icons.local_fire_department,
+              color: AppColors.secondary,
+              isDark: isDark,
+            ),
+            const SizedBox(width: 12),
+            _buildSummaryCard(
+              context,
+              title: 'Tasbih',
+              value: '${provider.totalTasbihCountToday}',
+              icon: Icons.touch_app_rounded,
+              color: AppColors.muted,
+              isDark: isDark,
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        _buildSummaryCard(
-          context,
-          title: 'Streak',
-          value: '${provider.streak}d',
-          icon: Icons.local_fire_department,
-          color: AppColors.secondary,
-          isDark: isDark,
-        ),
-        const SizedBox(width: 12),
-        _buildSummaryCard(
-          context,
-          title: 'Tasbih',
-          value: '${provider.totalTasbihCountToday}',
-          icon: Icons.touch_app_rounded,
-          color: AppColors.muted,
-          isDark: isDark,
-        ),
-        const SizedBox(width: 12),
-        _buildSummaryCard(
-          context,
-          title: 'Today',
-          value:
-              '${(provider.todayProgress * 100).toInt()}%',
-          icon: Icons.pie_chart,
-          color: AppColors.darkText,
-          isDark: isDark,
-        ),
-        const SizedBox(width: 12),
-        _buildSummaryCard(
-          context,
-          title: 'Siam',
-          value: '${provider.totalFastingDays}',
-          icon: Icons.nightlight_round,
-          color: AppColors.muted,
-          isDark: isDark,
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _buildSummaryCard(
+              context,
+              title: 'Today',
+              value: '${(provider.todayProgress * 100).toInt()}%',
+              icon: Icons.pie_chart,
+              color: AppColors.darkText,
+              isDark: isDark,
+            ),
+            const SizedBox(width: 12),
+            _buildSummaryCard(
+              context,
+              title: 'Siam',
+              value: '${provider.totalFastingDays}',
+              icon: Icons.nightlight_round,
+              color: AppColors.muted,
+              isDark: isDark,
+            ),
+            const SizedBox(width: 12),
+            const Spacer(),
+          ],
         ),
       ],
     );
