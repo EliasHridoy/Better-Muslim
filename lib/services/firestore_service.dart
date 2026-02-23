@@ -185,12 +185,26 @@ class FirestoreService {
             snap.docs.map((d) => FriendRequest.fromMap(d.data())).toList());
   }
 
+  Stream<List<FriendRequest>> getSentRequests(String userId) {
+    return _db
+        .collection('friendRequests')
+        .where('fromUserId', isEqualTo: userId)
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((d) => FriendRequest.fromMap(d.data())).toList());
+  }
+
   Future<void> updateRequestStatus(
       String requestId, FriendRequestStatus status) async {
     await _db
         .collection('friendRequests')
         .doc(requestId)
         .update({'status': status.name});
+  }
+
+  Future<void> deleteFriendRequest(String requestId) async {
+    await _db.collection('friendRequests').doc(requestId).delete();
   }
 
   // ─── Friends ───────────────────────────────────────────

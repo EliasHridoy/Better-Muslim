@@ -9,6 +9,7 @@ class FriendsProvider extends ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   List<UserModel> _friends = [];
   List<FriendRequest> _pendingRequests = [];
+  List<FriendRequest> _sentRequests = [];
   bool _isUsingMockData = true;
 
   // ─── Leaderboard cloud-first state ─────────────────────
@@ -18,6 +19,7 @@ class FriendsProvider extends ChangeNotifier {
 
   List<UserModel> get friends => _friends;
   List<FriendRequest> get pendingRequests => _pendingRequests;
+  List<FriendRequest> get sentRequests => _sentRequests;
   List<LeaderboardEntry> get cachedLeaderboard => _cachedLeaderboard;
   bool get isLeaderboardLoading => _isLeaderboardLoading;
   bool get isLeaderboardStale => _isLeaderboardStale;
@@ -32,9 +34,15 @@ class FriendsProvider extends ChangeNotifier {
       _friends = await _firestoreService.getFriends(userId);
       _isUsingMockData = false;
 
-      // Listen to pending requests
+      // Listen to pending requests (received)
       _firestoreService.getPendingRequests(userId).listen((requests) {
         _pendingRequests = requests;
+        notifyListeners();
+      });
+
+      // Listen to sent requests
+      _firestoreService.getSentRequests(userId).listen((requests) {
+        _sentRequests = requests;
         notifyListeners();
       });
 
@@ -100,6 +108,15 @@ class FriendsProvider extends ChangeNotifier {
         toUserName: 'You',
       ),
     ]);
+    _sentRequests.addAll([
+      FriendRequest(
+        id: 'sr1',
+        fromUserId: 'local',
+        fromUserName: 'You',
+        toUserId: 'u12',
+        toUserName: 'Sadik Rahman',
+      ),
+    ]);
   }
 
   void acceptRequest(String requestId) async {
@@ -145,6 +162,12 @@ class FriendsProvider extends ChangeNotifier {
     final targetUser = await _firestoreService.findUserByEmail(toEmail);
     if (targetUser == null) return false;
 
+    // Reject if trying to send to self
+    if (targetUser.id == fromUserId) return false;
+
+    // Reject if already friends
+    if (_friends.any((f) => f.id == targetUser.id)) return false;
+
     final request = FriendRequest(
       id: const Uuid().v4(),
       fromUserId: fromUserId,
@@ -156,6 +179,41 @@ class FriendsProvider extends ChangeNotifier {
     await _firestoreService.sendFriendRequest(request);
     notifyListeners();
     return true;
+  }
+
+  Future<bool> sendRequestById({
+    required String fromUserId,
+    required String fromUserName,
+    required String toUserId,
+  }) async {
+    // Reject if trying to send to self
+    if (toUserId == fromUserId) return false;
+
+    // Reject if already friends
+    if (_friends.any((f) => f.id == toUserId)) return false;
+
+    final targetUser = await _firestoreService.getUser(toUserId);
+    if (targetUser == null) return false;
+
+    final request = FriendRequest(
+      id: const Uuid().v4(),
+      fromUserId: fromUserId,
+      fromUserName: fromUserName,
+      toUserId: targetUser.id,
+      toUserName: targetUser.name,
+    );
+
+    await _firestoreService.sendFriendRequest(request);
+    notifyListeners();
+    return true;
+  }
+
+  void cancelSentRequest(String requestId) async {
+    if (!_isUsingMockData) {
+      await _firestoreService.deleteFriendRequest(requestId);
+    }
+    _sentRequests.removeWhere((r) => r.id == requestId);
+    notifyListeners();
   }
 
   // ═══════════════════════════════════════════════════════
