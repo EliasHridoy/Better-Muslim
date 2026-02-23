@@ -6,7 +6,6 @@ import '../../providers/task_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/tier_calculator.dart';
 import '../auth/login_screen.dart';
-// register_screen.dart removed — passwordless auth uses a unified login screen
 import '../stats/activity_stats_screen.dart';
 import '../leaderboard/leaderboard_screen.dart';
 import '../charity/charity_tracker_screen.dart';

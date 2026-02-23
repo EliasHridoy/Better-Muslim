@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
-import 'register_screen.dart';
-import 'forgot_password_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -32,49 +32,41 @@ class _LoginScreenState extends State<LoginScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Create Account'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            authProvider.clearError();
+            Navigator.pop(context);
+          },
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
-
-                // ─── Header ─────────────────────────────
-                Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.mosque,
-                      color: AppColors.accent,
-                      size: 40,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Welcome Back',
+                    'Join the Ummah',
                     style: theme.textTheme.headlineMedium,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Sign in to sync your progress',
+                    'Track your deeds & compete with friends',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: AppColors.muted,
                     ),
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
 
                 // ─── Error ──────────────────────────────
                 if (authProvider.error != null) ...[
@@ -87,25 +79,33 @@ class _LoginScreenState extends State<LoginScreen> {
                       border: Border.all(
                           color: AppColors.error.withValues(alpha: 0.3)),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline,
-                            color: AppColors.error, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            authProvider.error!,
-                            style: const TextStyle(
-                              color: AppColors.error,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      authProvider.error!,
+                      style: const TextStyle(
+                          color: AppColors.error, fontSize: 13),
                     ),
                   ),
                   const SizedBox(height: 16),
                 ],
+
+                // ─── Name ───────────────────────────────
+                Text('Full Name', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _nameController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    hintText: 'Your name',
+                    prefixIcon: const Icon(Icons.person_outline, size: 20),
+                    filled: true,
+                    fillColor: isDark ? AppColors.darkCard : AppColors.lightBackground,
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter your name';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
 
                 // ─── Email ──────────────────────────────
                 Text('Email', style: theme.textTheme.labelLarge),
@@ -134,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
-                    hintText: '••••••••',
+                    hintText: 'At least 6 characters',
                     prefixIcon: const Icon(Icons.lock_outline, size: 20),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -150,48 +150,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     fillColor: isDark ? AppColors.darkCard : AppColors.lightBackground,
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Enter your password';
+                    if (v == null || v.isEmpty) return 'Enter a password';
                     if (v.length < 6) return 'At least 6 characters';
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
-
-                // ─── Forgot Password ────────────────────
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      authProvider.clearError();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordScreen(),
-                        ),
-                      );
-                    },
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      'Forgot Password?',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.accent,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 32),
 
-                // ─── Sign In button ─────────────────────
+                // ─── Register button ────────────────────
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: authProvider.isLoading ? null : _signIn,
+                    onPressed: authProvider.isLoading ? null : _register,
                     child: authProvider.isLoading
                         ? const SizedBox(
                             width: 22,
@@ -201,31 +172,27 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Colors.black,
                             ),
                           )
-                        : const Text('Sign In'),
+                        : const Text('Create Account'),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // ─── Register link ──────────────────────
+                // ─── Login link ─────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account? ",
+                      'Already have an account? ',
                       style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppColors.muted),
                     ),
                     GestureDetector(
                       onTap: () {
                         authProvider.clearError();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const RegisterScreen()),
-                        );
+                        Navigator.pop(context);
                       },
                       child: Text(
-                        'Register',
+                        'Sign In',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppColors.accent,
                           fontWeight: FontWeight.w700,
@@ -233,21 +200,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 24),
-
-                // ─── Continue as guest ──────────────────
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Continue as Guest',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.muted,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -257,17 +209,20 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _signIn() async {
+  void _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     context.read<AuthProvider>().clearError();
-    final success = await context.read<AuthProvider>().signIn(
+    final success = await context.read<AuthProvider>().signUp(
+          _nameController.text.trim(),
           _emailController.text.trim(),
           _passwordController.text,
         );
 
     if (success && mounted) {
-      Navigator.pop(context);
+      // Pop back to login, then pop login to go to main app
+      Navigator.pop(context); // Pop register
+      Navigator.pop(context); // Pop login
     }
   }
 }

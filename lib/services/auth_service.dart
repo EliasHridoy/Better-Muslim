@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -15,49 +14,49 @@ class AuthService {
   // Is logged in
   bool get isLoggedIn => _auth.currentUser != null;
 
-  // ─── Action Code Settings ─────────────────────────────
-  ActionCodeSettings _getActionCodeSettings() {
-    // For web, use the current URL; for mobile, use the dynamic link domain
-    final url = kIsWeb
-        ? Uri.base.toString()
-        : 'https://better-muslim-2.firebaseapp.com/__/auth/action';
-
-    return ActionCodeSettings(
-      url: url,
-      handleCodeInApp: true,
-      iOSBundleId: 'com.bettermuslim.betterMuslim',
-      androidPackageName: 'com.bettermuslim.better_muslim',
-      androidInstallApp: true,
-      androidMinimumVersion: '21',
-    );
-  }
-
-  // ─── Send Sign-In Link ────────────────────────────────
-  Future<void> sendSignInLink({required String email}) async {
+  // ─── Sign Up ───────────────────────────────────────────
+  Future<User?> signUp({
+    required String email,
+    required String password,
+    required String name,
+  }) async {
     try {
-      await _auth.sendSignInLinkToEmail(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
-        actionCodeSettings: _getActionCodeSettings(),
+        password: password,
       );
+
+      final user = credential.user;
+      if (user != null) {
+        // Update display name
+        await user.updateDisplayName(name);
+
+        // Create Firestore user document
+        await _firestore.collection('users').doc(user.uid).set({
+          'name': name,
+          'email': email,
+          'photoUrl': null,
+          'totalPoints': 0,
+          'tier': 'Bronze',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return user;
     } on FirebaseAuthException {
       rethrow;
     }
   }
 
-  // ─── Check if Link is Valid ───────────────────────────
-  bool isSignInWithEmailLink(String link) {
-    return _auth.isSignInWithEmailLink(link);
-  }
-
-  // ─── Sign In with Email Link ──────────────────────────
-  Future<User?> signInWithEmailLink({
+  // ─── Sign In ───────────────────────────────────────────
+  Future<User?> signIn({
     required String email,
-    required String link,
+    required String password,
   }) async {
     try {
-      final credential = await _auth.signInWithEmailLink(
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email,
-        emailLink: link,
+        password: password,
       );
       return credential.user;
     } on FirebaseAuthException {
@@ -65,59 +64,39 @@ class AuthService {
     }
   }
 
-  // ─── Create User Document ─────────────────────────────
-  Future<void> createUserDocument({
-    required String uid,
-    required String name,
-    required String email,
-  }) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
-
-    if (!doc.exists) {
-      // New user — create document
-      await _firestore.collection('users').doc(uid).set({
-        'name': name,
-        'email': email,
-        'photoUrl': null,
-        'totalPoints': 0,
-        'tier': 'Bronze',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    } else {
-      // Existing user — update name if provided and different
-      final data = doc.data();
-      if (data != null && name.isNotEmpty && data['name'] != name) {
-        await _firestore.collection('users').doc(uid).update({'name': name});
-      }
+  // ─── Reset Password ──────────────────────────────────────
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException {
+      rethrow;
     }
   }
 
-  // ─── Update Display Name ──────────────────────────────
-  Future<void> updateDisplayName(String name) async {
-    final user = _auth.currentUser;
-    if (user != null && name.isNotEmpty) {
-      await user.updateDisplayName(name);
-    }
-  }
-
-  // ─── Sign Out ─────────────────────────────────────────
+  // ─── Sign Out ──────────────────────────────────────────
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
-  // ─── Get user-friendly error message ──────────────────
+  // ─── Get user-friendly error message ───────────────────
   static String getErrorMessage(FirebaseAuthException e) {
     switch (e.code) {
+      case 'email-already-in-use':
+        return 'An account already exists with this email.';
       case 'invalid-email':
         return 'Invalid email address.';
+      case 'operation-not-allowed':
+        return 'Email/password accounts are not enabled.';
+      case 'weak-password':
+        return 'Password is too weak. Use at least 6 characters.';
       case 'user-disabled':
         return 'This account has been disabled.';
-      case 'operation-not-allowed':
-        return 'Email link sign-in is not enabled. Please contact support.';
-      case 'expired-action-code':
-        return 'This sign-in link has expired. Please request a new one.';
-      case 'invalid-action-code':
-        return 'This sign-in link is invalid. Please request a new one.';
+      case 'user-not-found':
+        return 'No account found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password.';
+      case 'invalid-credential':
+        return 'Invalid email or password.';
       default:
         return e.message ?? 'An unknown error occurred.';
     }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -55,7 +54,6 @@ class BetterMuslimApp extends StatelessWidget {
 }
 
 /// Shows onboarding on first launch, then the main app.
-/// Also handles incoming email sign-in links (passwordless auth).
 class _AppGate extends StatefulWidget {
   const _AppGate();
 
@@ -70,34 +68,6 @@ class _AppGateState extends State<_AppGate> {
   void initState() {
     super.initState();
     _onboardingDone = LocalStorageService.isOnboardingComplete();
-
-    // Handle incoming email sign-in links on web
-    if (kIsWeb) {
-      _handleIncomingEmailLink();
-    }
-  }
-
-  /// On web, check if the current URL contains a Firebase email sign-in link.
-  /// If so, process it to complete sign-in automatically.
-  void _handleIncomingEmailLink() {
-    final uri = Uri.base.toString();
-    final authProvider = context.read<AuthProvider>();
-
-    // Check if the current URL is a valid sign-in link
-    if (uri.contains('apiKey') && uri.contains('oobCode')) {
-      // Delay slightly to let the widget tree stabilize
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final success = await authProvider.handleEmailLink(uri);
-        if (success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Signed in successfully! ✅'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      });
-    }
   }
 
   @override

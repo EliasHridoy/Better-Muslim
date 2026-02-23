@@ -145,28 +145,6 @@ class LocalStorageService {
     await _settingsBox.put('onboarding_complete', value);
   }
 
-  // ─── Pending Auth (Passwordless) ───────────────────────
-  static Future<void> setPendingEmail(String email) async {
-    await _settingsBox.put('pending_email', email);
-  }
-
-  static String? getPendingEmail() {
-    return _settingsBox.get('pending_email');
-  }
-
-  static Future<void> setPendingName(String name) async {
-    await _settingsBox.put('pending_name', name);
-  }
-
-  static String? getPendingName() {
-    return _settingsBox.get('pending_name');
-  }
-
-  static Future<void> clearPendingAuth() async {
-    await _settingsBox.delete('pending_email');
-    await _settingsBox.delete('pending_name');
-  }
-
   // ═══════════════════════════════════════════════════════
   // ─── Sync Tracking (Dirty Flags) ──────────────────────
   // ═══════════════════════════════════════════════════════
