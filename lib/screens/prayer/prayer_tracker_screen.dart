@@ -3,14 +3,28 @@ import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task_model.dart';
+import '../../providers/achievement_provider.dart';
+import '../../models/achievement_model.dart';
 import 'dua_page_screen.dart';
 
 class PrayerTrackerScreen extends StatelessWidget {
   const PrayerTrackerScreen({super.key});
 
-  void _onPrayerTap(BuildContext context, TaskModel prayer, TaskProvider provider) {
+  void _onPrayerTap(BuildContext context, TaskModel prayer, TaskProvider provider) async {
     final wasCompleted = provider.isTaskCompletedToday(prayer.id);
     provider.togglePrayer(prayer.id);
+
+    if (!wasCompleted) {
+      // Check achievements
+      final achievementProvider = context.read<AchievementProvider>();
+      final points = await achievementProvider.checkAndUnlock(
+        context,
+        AchievementCategory.prayer,
+      );
+      if (points > 0 && context.mounted) {
+        provider.addBonusPoints(points);
+      }
+    }
 
     // Navigate to dua page when marking Fajr or Isha as complete
     if (!wasCompleted) {

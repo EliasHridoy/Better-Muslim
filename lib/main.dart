@@ -8,6 +8,7 @@ import 'providers/task_provider.dart';
 import 'providers/friends_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/prayer_times_provider.dart';
+import 'providers/achievement_provider.dart';
 import 'services/local_storage_service.dart';
 import 'screens/splash/splash_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
@@ -36,6 +37,7 @@ class BetterMuslimApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FriendsProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PrayerTimesProvider()),
+        ChangeNotifierProvider(create: (_) => AchievementProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {

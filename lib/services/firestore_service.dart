@@ -4,6 +4,7 @@ import '../models/task_entry_model.dart';
 import '../models/user_model.dart';
 import '../models/friend_model.dart';
 import '../models/charity_entry_model.dart';
+import '../models/achievement_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -167,6 +168,34 @@ class FirestoreService {
 
     if (!doc.exists || doc.data() == null) return false;
     return doc.data()!['isFasting'] ?? false;
+  }
+
+  // ─── Achievements ───────────────────────────────────────
+
+  Future<void> saveUserAchievements(
+      String uid, List<UserAchievement> achievements) async {
+    final data = achievements.map((a) => a.toMap()).toList();
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('achievements')
+        .doc('all')
+        .set({'items': data});
+  }
+
+  Future<List<UserAchievement>> getUserAchievements(String uid) async {
+    final doc = await _db
+        .collection('users')
+        .doc(uid)
+        .collection('achievements')
+        .doc('all')
+        .get();
+
+    if (!doc.exists || doc.data() == null) return [];
+    final items = doc.data()!['items'] as List<dynamic>? ?? [];
+    return items
+        .map((e) => UserAchievement.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   // ─── Friend Requests ──────────────────────────────────

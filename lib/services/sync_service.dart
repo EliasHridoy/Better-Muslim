@@ -97,6 +97,11 @@ class SyncService {
         await _syncCharityEntries(userId);
       }
 
+      // Sync achievements
+      if (dirtyKeys.contains('achievements')) {
+        await _syncAchievements(userId);
+      }
+
       // Sync points
       if (dirtyKeys.contains('points')) {
         await _syncPoints(userId);
@@ -164,6 +169,18 @@ class SyncService {
           '[SyncService] Charity entries synced (${localEntries.length})');
     } catch (e) {
       debugPrint('[SyncService] Failed to sync charity entries: $e');
+    }
+  }
+
+  Future<void> _syncAchievements(String userId) async {
+    try {
+      final localAchievements = LocalStorageService.getUserAchievements();
+      await _firestoreService.saveUserAchievements(userId, localAchievements);
+      LocalStorageService.clearDirty('achievements');
+      debugPrint(
+          '[SyncService] Achievements synced (${localAchievements.length})');
+    } catch (e) {
+      debugPrint('[SyncService] Failed to sync achievements: $e');
     }
   }
 
@@ -254,6 +271,18 @@ class SyncService {
           LocalStorageService.clearDirty('charity');
           debugPrint(
               '[SyncService] Pulled ${cloudCharity.length} charity entries');
+        }
+      }
+
+      // Pull achievements
+      final localAchievements = LocalStorageService.getUserAchievements();
+      if (localAchievements.isEmpty) {
+        final cloudAchievements = await _firestoreService.getUserAchievements(userId);
+        if (cloudAchievements.isNotEmpty) {
+          await LocalStorageService.saveUserAchievements(cloudAchievements);
+          LocalStorageService.clearDirty('achievements');
+          debugPrint(
+              '[SyncService] Pulled ${cloudAchievements.length} achievements');
         }
       }
 

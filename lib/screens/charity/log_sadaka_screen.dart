@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../providers/task_provider.dart';
+import '../../providers/achievement_provider.dart';
+import '../../models/achievement_model.dart';
 
 class LogSadakaScreen extends StatefulWidget {
   const LogSadakaScreen({super.key});
@@ -107,7 +109,7 @@ class _LogSadakaScreenState extends State<LogSadakaScreen> {
     );
   }
 
-  void _logDonation() {
+  void _logDonation() async {
     final amountText = _amountController.text.trim();
     if (amountText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -131,13 +133,26 @@ class _LogSadakaScreenState extends State<LogSadakaScreen> {
       return;
     }
 
-    context.read<TaskProvider>().addCharityEntry(
-          amount,
-          _selectedPurpose,
-          _selectedDate,
-        );
+    final provider = context.read<TaskProvider>();
+    provider.addCharityEntry(
+      amount,
+      _selectedPurpose,
+      _selectedDate,
+    );
 
-    Navigator.pop(context);
+    // Check achievements
+    final achievementProvider = context.read<AchievementProvider>();
+    final points = await achievementProvider.checkAndUnlock(
+      context,
+      AchievementCategory.charity,
+    );
+    if (points > 0) {
+      provider.addBonusPoints(points);
+    }
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override

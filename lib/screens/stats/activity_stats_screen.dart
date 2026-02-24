@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../providers/task_provider.dart';
 import '../../models/task_model.dart';
 import '../../utils/tier_calculator.dart';
+import '../achievements/achievements_screen.dart';
 
 class ActivityStatsScreen extends StatefulWidget {
   const ActivityStatsScreen({super.key});
@@ -31,7 +32,23 @@ class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
             : taskProvider.tasbihTasks.length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity Stats')),
+      appBar: AppBar(
+        title: const Text('Activity Stats'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.stars_rounded, color: AppColors.accent),
+            tooltip: 'Achievements',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AchievementsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

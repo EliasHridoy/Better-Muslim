@@ -5,6 +5,7 @@ import '../models/task_model.dart';
 import '../models/task_entry_model.dart';
 import '../models/user_model.dart';
 import '../models/charity_entry_model.dart';
+import '../models/achievement_model.dart';
 
 class LocalStorageService {
   static Future<void> init() async {
@@ -14,6 +15,7 @@ class LocalStorageService {
     await Hive.openBox(AppConstants.entriesBox);
     await Hive.openBox(AppConstants.settingsBox);
     await Hive.openBox(AppConstants.charityEntriesBox);
+    await Hive.openBox(AppConstants.achievementsBox);
     await Hive.openBox(AppConstants.syncBox);
   }
 
@@ -28,6 +30,22 @@ class LocalStorageService {
     final data = _userBox.get('current_user');
     if (data == null) return null;
     return UserModel.fromMap(jsonDecode(data));
+  }
+
+  static Future<void> clearUserData() async {
+    await _userBox.clear();
+    await _tasksBox.clear();
+    await _entriesBox.clear();
+    await _charityBox.clear();
+    await _achievementsBox.clear();
+    await _syncBox.clear();
+
+    final keys = _settingsBox.keys.toList();
+    for (final key in keys) {
+      if (key != 'dark_mode' && key != 'onboarding_complete') {
+        await _settingsBox.delete(key);
+      }
+    }
   }
 
   // ─── Tasks ─────────────────────────────────────────────
@@ -117,6 +135,14 @@ class LocalStorageService {
     return _settingsBox.get('durudh_$dateKey', defaultValue: 0);
   }
 
+  static List<String> getAllDurudhDateKeys() {
+    return _settingsBox.keys
+        .cast<String>()
+        .where((k) => k.startsWith('durudh_'))
+        .map((k) => k.replaceFirst('durudh_', ''))
+        .toList();
+  }
+
   // ─── Fasting (Siam) ─────────────────────────────────────
   static Future<void> setFasting(String dateKey, bool isFasting) async {
     await _settingsBox.put('fasting_$dateKey', isFasting);
@@ -143,6 +169,23 @@ class LocalStorageService {
 
   static Future<void> setOnboardingComplete(bool value) async {
     await _settingsBox.put('onboarding_complete', value);
+  }
+
+  // ─── Achievements ──────────────────────────────────────
+  static Box get _achievementsBox => Hive.box(AppConstants.achievementsBox);
+
+  static Future<void> saveUserAchievements(List<UserAchievement> achievements) async {
+    final maps = achievements.map((a) => a.toJson()).toList();
+    await _achievementsBox.put('all_achievements', maps);
+    markDirty('achievements');
+  }
+
+  static List<UserAchievement> getUserAchievements() {
+    final data = _achievementsBox.get('all_achievements');
+    if (data == null) return [];
+    return (data as List)
+        .map((a) => UserAchievement.fromJson(a as String))
+        .toList();
   }
 
   // ═══════════════════════════════════════════════════════

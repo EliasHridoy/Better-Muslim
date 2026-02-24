@@ -4,6 +4,8 @@ import '../../config/theme.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/achievement_provider.dart';
+import '../../providers/friends_provider.dart';
 import '../../utils/tier_calculator.dart';
 import '../auth/login_screen.dart';
 import '../stats/activity_stats_screen.dart';
@@ -161,6 +163,9 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () async {
                   await authProvider.signOut();
                   if (context.mounted) {
+                    context.read<TaskProvider>().disconnectUser();
+                    context.read<AchievementProvider>().reload();
+                    context.read<FriendsProvider>().clear();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Signed out successfully'),

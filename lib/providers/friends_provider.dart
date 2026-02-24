@@ -10,7 +10,7 @@ class FriendsProvider extends ChangeNotifier {
   List<UserModel> _friends = [];
   List<FriendRequest> _pendingRequests = [];
   List<FriendRequest> _sentRequests = [];
-  bool _isUsingMockData = true;
+  bool _isUsingMockData = false;
 
   // ─── Leaderboard cloud-first state ─────────────────────
   List<LeaderboardEntry> _cachedLeaderboard = [];
@@ -24,8 +24,16 @@ class FriendsProvider extends ChangeNotifier {
   bool get isLeaderboardLoading => _isLeaderboardLoading;
   bool get isLeaderboardStale => _isLeaderboardStale;
 
-  FriendsProvider() {
-    _loadMockData();
+  FriendsProvider();
+
+  void clear() {
+    _friends = [];
+    _pendingRequests = [];
+    _sentRequests = [];
+    _cachedLeaderboard = [];
+    _isLeaderboardLoading = false;
+    _isLeaderboardStale = false;
+    notifyListeners();
   }
 
   // ─── Initialize with real user (call after auth) ──────
@@ -53,71 +61,7 @@ class FriendsProvider extends ChangeNotifier {
     }
   }
 
-  void _loadMockData() {
-    _friends.addAll([
-      UserModel(
-        id: 'f1',
-        name: 'Ahmad Hassan',
-        email: 'ahmad@mail.com',
-        totalPoints: 245,
-        tier: 'Silver',
-      ),
-      UserModel(
-        id: 'f2',
-        name: 'Fatima Ali',
-        email: 'fatima@mail.com',
-        totalPoints: 523,
-        tier: 'Gold',
-      ),
-      UserModel(
-        id: 'f3',
-        name: 'Omar Khan',
-        email: 'omar@mail.com',
-        totalPoints: 89,
-        tier: 'Bronze',
-      ),
-      UserModel(
-        id: 'f4',
-        name: 'Aisha Rahman',
-        email: 'aisha@mail.com',
-        totalPoints: 2150,
-        tier: 'Platinum',
-      ),
-      UserModel(
-        id: 'f5',
-        name: 'Yusuf Aziz',
-        email: 'yusuf@mail.com',
-        totalPoints: 178,
-        tier: 'Silver',
-      ),
-    ]);
 
-    _pendingRequests.addAll([
-      FriendRequest(
-        id: 'r1',
-        fromUserId: 'u10',
-        fromUserName: 'Bilal Ahmed',
-        toUserId: 'local',
-        toUserName: 'You',
-      ),
-      FriendRequest(
-        id: 'r2',
-        fromUserId: 'u11',
-        fromUserName: 'Maryam Noor',
-        toUserId: 'local',
-        toUserName: 'You',
-      ),
-    ]);
-    _sentRequests.addAll([
-      FriendRequest(
-        id: 'sr1',
-        fromUserId: 'local',
-        fromUserName: 'You',
-        toUserId: 'u12',
-        toUserName: 'Sadik Rahman',
-      ),
-    ]);
-  }
 
   void acceptRequest(String requestId) async {
     final idx = _pendingRequests.indexWhere((r) => r.id == requestId);

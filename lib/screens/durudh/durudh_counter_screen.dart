@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import 'package:provider/provider.dart';
 import '../../providers/task_provider.dart';
+import '../../providers/achievement_provider.dart';
+import '../../models/achievement_model.dart';
 
 class DurudhCounterScreen extends StatefulWidget {
   const DurudhCounterScreen({super.key});
@@ -63,11 +65,23 @@ class _DurudhCounterScreenState extends State<DurudhCounterScreen>
     setState(() => _isRunning = false);
   }
 
-  void _tap() {
+  void _tap() async {
     if (!_isRunning) return;
     setState(() => _count++);
     _pulseController.reverse().then((_) => _pulseController.forward());
-    context.read<TaskProvider>().incrementDurudh();
+
+    final provider = context.read<TaskProvider>();
+    provider.incrementDurudh();
+
+    // Check achievements
+    final achievementProvider = context.read<AchievementProvider>();
+    final points = await achievementProvider.checkAndUnlock(
+      context,
+      AchievementCategory.durood,
+    );
+    if (points > 0 && mounted) {
+      provider.addBonusPoints(points);
+    }
   }
 
   void _reset() {

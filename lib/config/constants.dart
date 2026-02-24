@@ -32,5 +32,6 @@ class AppConstants {
   static const String entriesBox = 'entries_box';
   static const String settingsBox = 'settings_box';
   static const String charityEntriesBox = 'charity_entries_box';
+  static const String achievementsBox = 'achievements_box';
   static const String syncBox = 'sync_box';
 }

@@ -90,6 +90,7 @@ class TaskProvider with ChangeNotifier {
     _syncService.setUserId(null);
     _totalPoints = 0;
     _streak = 0;
+    _charityEntries = [];
     _entriesByDate.clear();
     _tasks = [];
     _initializeDefaultTasks();
@@ -168,6 +169,21 @@ class TaskProvider with ChangeNotifier {
     return entry?.count ?? 0;
   }
 
+  /// Total lifetime count for a specific tasbih task.
+  int getTasbihTotalLifetimeCount(String taskId) {
+    int total = 0;
+    final allKeys = LocalStorageService.getAllEntryDateKeys();
+    final todayKey = DateHelpers.dateKey(DateTime.now());
+    final keysToCheck = allKeys.toSet()..add(todayKey);
+
+    for (final key in keysToCheck) {
+      final entries = _entriesByDate[key] ?? LocalStorageService.getEntries(key);
+      final entry = entries.where((e) => e.taskId == taskId).firstOrNull;
+      total += entry?.count ?? 0;
+    }
+    return total;
+  }
+
   int get todayCompletedCount {
     final taskIds = _tasks.map((t) => t.id).toSet();
     return getTodayEntries()
@@ -184,6 +200,24 @@ class TaskProvider with ChangeNotifier {
     final tasbihCompleted =
         tasbihTasks.where((t) => isTaskCompletedToday(t.id)).length;
     return (prayerCompleted + tasbihCompleted) / _tasks.length;
+  }
+
+  int get totalPrayersCompletedLifetime {
+    int total = 0;
+    final allKeys = LocalStorageService.getAllEntryDateKeys();
+    final todayKey = DateHelpers.dateKey(DateTime.now());
+    final keysToCheck = allKeys.toSet()..add(todayKey);
+    final prayerIds = prayerTasks.map((t) => t.id).toSet();
+
+    for (final key in keysToCheck) {
+      final entries = _entriesByDate[key] ?? LocalStorageService.getEntries(key);
+      total += entries.where((e) => e.completed && prayerIds.contains(e.taskId)).length;
+    }
+    return total;
+  }
+
+  double get totalCharityAmount {
+    return _charityEntries.fold(0.0, (sum, entry) => sum + entry.amount);
   }
 
   // ─── Save locally + trigger background sync ───────────
@@ -352,6 +386,17 @@ class TaskProvider with ChangeNotifier {
   int get durudhCountToday {
     final key = DateHelpers.dateKey(DateTime.now());
     return LocalStorageService.getDurudhCount(key);
+  }
+
+  int get totalDurudhLifetimeCount {
+    int total = 0;
+    final allKeys = LocalStorageService.getAllDurudhDateKeys();
+    final todayKey = DateHelpers.dateKey(DateTime.now());
+    final keysToCheck = allKeys.toSet()..add(todayKey);
+    for (final key in keysToCheck) {
+      total += LocalStorageService.getDurudhCount(key);
+    }
+    return total;
   }
 
   void incrementDurudh() {

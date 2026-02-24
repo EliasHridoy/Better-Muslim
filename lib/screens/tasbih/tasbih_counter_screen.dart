@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/task_provider.dart';
+import '../../providers/achievement_provider.dart';
 import '../../models/task_model.dart';
+import '../../models/achievement_model.dart';
 
 
 class TasbihCounterScreen extends StatefulWidget {
@@ -78,7 +80,7 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
     final currentTask = tasbihTasks[_selectedIndex];
     final count = taskProvider.getTasbihCountToday(currentTask.id);
     final progress = (count / currentTask.targetCount).clamp(0.0, 1.0);
-    final totalCountToday = taskProvider.totalTasbihCountToday;
+    final totalCountSpecific = taskProvider.getTasbihTotalLifetimeCount(currentTask.id);
 
     return Scaffold(
       backgroundColor: _getBgColor(isDark),
@@ -233,7 +235,7 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
             Expanded(
               child: Center(
                 child: GestureDetector(
-                  onTap: () {
+                  onTap: () async {
                     if (_isVibrationEnabled) {
                       HapticFeedback.lightImpact();
                     }
@@ -243,7 +245,21 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
                     _pulseController.forward().then((_) {
                       if (mounted) _pulseController.reverse();
                     });
+
+                    // Increment tasbih
                     taskProvider.incrementTasbih(currentTask.id);
+
+                    // Check achievements
+                    final newCount = taskProvider.getTasbihCountToday(currentTask.id);
+                    final achievementProvider = context.read<AchievementProvider>();
+                    final points = await achievementProvider.checkAndUnlock(
+                      context,
+                      AchievementCategory.tasbih,
+                      defaultCount: newCount,
+                    );
+                    if (points > 0 && mounted) {
+                      taskProvider.addBonusPoints(points);
+                    }
                   },
                   child: AnimatedBuilder(
                     animation: Listenable.merge([_pulseAnimation, _breatheAnimation]),
@@ -381,7 +397,7 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
                   Expanded(
                     child: _buildStatCard(
                       title: 'TOTAL',
-                      value: totalCountToday.toString(),
+                      value: totalCountSpecific.toString(),
                       icon: Icons.all_inclusive,
                       isDark: isDark,
                     ),
@@ -460,17 +476,17 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.secondary,
+                  color: isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.secondary,
                   letterSpacing: 1.0,
                 ),
               ),
               Icon(
                 icon,
                 size: 16,
-                color: AppColors.secondary,
+                color: isDark ? Colors.white.withValues(alpha: 0.7) : AppColors.secondary,
               ),
             ],
           ),

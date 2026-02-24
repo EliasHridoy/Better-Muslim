@@ -163,6 +163,7 @@ class AuthProvider extends ChangeNotifier {
   // ─── Sign Out ──────────────────────────────────────────
   Future<void> signOut() async {
     await _authService.signOut();
+    await LocalStorageService.clearUserData();
     _firebaseUser = null;
     _userModel = null;
     notifyListeners();
