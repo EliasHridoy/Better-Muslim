@@ -17,12 +17,18 @@ class FriendsProvider extends ChangeNotifier {
   bool _isLeaderboardLoading = false;
   bool _isLeaderboardStale = false;
 
+  // ─── League leaderboard state ─────────────────────────
+  final Map<String, List<LeaderboardEntry>> _leagueLeaderboards = {};
+  bool _isLeagueLoading = false;
+
   List<UserModel> get friends => _friends;
   List<FriendRequest> get pendingRequests => _pendingRequests;
   List<FriendRequest> get sentRequests => _sentRequests;
   List<LeaderboardEntry> get cachedLeaderboard => _cachedLeaderboard;
   bool get isLeaderboardLoading => _isLeaderboardLoading;
   bool get isLeaderboardStale => _isLeaderboardStale;
+  Map<String, List<LeaderboardEntry>> get leagueLeaderboards => _leagueLeaderboards;
+  bool get isLeagueLoading => _isLeagueLoading;
 
   FriendsProvider();
 
@@ -33,6 +39,8 @@ class FriendsProvider extends ChangeNotifier {
     _cachedLeaderboard = [];
     _isLeaderboardLoading = false;
     _isLeaderboardStale = false;
+    _leagueLeaderboards.clear();
+    _isLeagueLoading = false;
     notifyListeners();
   }
 
@@ -265,6 +273,87 @@ class FriendsProvider extends ChangeNotifier {
         rank: i + 1,
       );
     });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // ─── User Search ─────────────────────────────────────
+  // ═══════════════════════════════════════════════════════
+
+  /// Search users by name or email. Returns matched users from Firestore.
+  Future<List<UserModel>> searchUsers(String query) async {
+    try {
+      return await _firestoreService.searchUsers(query);
+    } catch (e) {
+      debugPrint('User search error: $e');
+      return [];
+    }
+  }
+
+  /// Check if a user is already a friend.
+  bool isFriend(String userId) {
+    return _friends.any((f) => f.id == userId);
+  }
+
+  /// Check if a friend request is already pending (sent) to this user.
+  bool hasPendingRequestTo(String userId) {
+    return _sentRequests.any((r) => r.toUserId == userId);
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // ─── League Leaderboards (Global Top 100 per Tier) ────
+  // ═══════════════════════════════════════════════════════
+
+  static const List<String> allLeagues = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+
+  /// Fetch top 100 users for all leagues from Firestore.
+  Future<void> fetchAllLeagues(String? userId, int myPoints) async {
+    _isLeagueLoading = true;
+    notifyListeners();
+
+    final myTier = _getTier(myPoints);
+
+    for (final league in allLeagues) {
+      try {
+        final users = await _firestoreService.getLeagueUsers(league);
+
+        final entries = users.asMap().entries.map((e) {
+          final u = e.value;
+          final isYou = u.id == userId;
+          return LeaderboardEntry(
+            userId: u.id,
+            name: isYou ? 'You' : u.name,
+            photoUrl: u.photoUrl,
+            points: isYou ? myPoints : u.totalPoints,
+            tier: u.tier,
+            rank: e.key + 1,
+          );
+        }).toList();
+
+        // If user belongs to this league but isn't in the list, add them
+        if (league == myTier && userId != null && !entries.any((e) => e.userId == userId)) {
+          entries.add(LeaderboardEntry(
+            userId: userId,
+            name: 'You',
+            points: myPoints,
+            tier: myTier,
+            rank: entries.length + 1,
+          ));
+        }
+
+        _leagueLeaderboards[league] = entries;
+      } catch (e) {
+        debugPrint('League fetch error ($league): $e');
+        _leagueLeaderboards[league] ??= [];
+      }
+    }
+
+    _isLeagueLoading = false;
+    notifyListeners();
+  }
+
+  /// Get cached league entries for a specific tier.
+  List<LeaderboardEntry> getLeagueEntries(String tier) {
+    return _leagueLeaderboards[tier] ?? [];
   }
 
   String _getTier(int points) {

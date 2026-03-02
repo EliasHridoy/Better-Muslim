@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../config/theme.dart';
 import '../../providers/task_provider.dart';
-import '../../models/task_model.dart';
 import '../../utils/tier_calculator.dart';
 import '../achievements/achievements_screen.dart';
 
@@ -16,20 +15,18 @@ class ActivityStatsScreen extends StatefulWidget {
 
 class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
   bool _showMonthly = false;
-  TaskCategory? _selectedCategory; // null = All
+  String? _selectedCategory; // null = All
 
   @override
   Widget build(BuildContext context) {
     final taskProvider = context.watch<TaskProvider>();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final weeklyData = taskProvider.getWeeklyCompletions(category: _selectedCategory);
-    final monthlyData = taskProvider.getMonthlyCompletions(category: _selectedCategory);
-    final maxTasks = _selectedCategory == null
-        ? taskProvider.todayTotalTasks
-        : _selectedCategory == TaskCategory.prayer
-            ? taskProvider.prayerTasks.length
-            : taskProvider.tasbihTasks.length;
+    final weeklyData = taskProvider.getWeeklyData(category: _selectedCategory);
+    final monthlyData = taskProvider.getMonthlyData(category: _selectedCategory);
+    final dataMax = (_showMonthly ? monthlyData : weeklyData)
+        .fold<int>(0, (a, b) => a > b ? a : b);
+    final maxTasks = _chartMaxY(_selectedCategory, taskProvider, dataMax);
 
     return Scaffold(
       appBar: AppBar(
@@ -100,59 +97,95 @@ class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
     );
   }
 
+  // ─── Helper: dynamic maxY per category ──────────────────
+  double _chartMaxY(String? category, TaskProvider provider, int dataMax) {
+    switch (category) {
+      case 'prayer':
+        return provider.prayerTasks.length.toDouble() + 1;
+      case 'siam':
+        return 2; // 0 or 1
+      default:
+        return (dataMax > 0 ? dataMax.toDouble() : 9) + 1;
+    }
+  }
+
+  // ─── Helper: tooltip unit label ─────────────────────────
+  String _tooltipLabel(String? category, int value) {
+    switch (category) {
+      case 'prayer':
+        return '$value prayers';
+      case 'tasbih':
+        return '$value counts';
+      case 'siam':
+        return value > 0 ? 'Fasting ✓' : 'No fast';
+      case 'durood':
+        return '$value durood';
+      case 'donation':
+        return '$value donations';
+      default:
+        return '$value tasks';
+    }
+  }
+
   // ─── Category Filter Chips ──────────────────────────────
   Widget _buildCategoryChips(bool isDark) {
-    final items = <({String label, TaskCategory? value, IconData icon})>[
+    final items = <({String label, String? value, IconData icon})>[
       (label: 'All', value: null, icon: Icons.grid_view_rounded),
-      (label: 'Prayer', value: TaskCategory.prayer, icon: Icons.mosque_rounded),
-      (label: 'Tasbih', value: TaskCategory.tasbih, icon: Icons.touch_app_rounded),
+      (label: 'Prayer', value: 'prayer', icon: Icons.mosque_rounded),
+      (label: 'Tasbih', value: 'tasbih', icon: Icons.touch_app_rounded),
+      (label: 'Siam', value: 'siam', icon: Icons.nightlight_round),
+      (label: 'Durood', value: 'durood', icon: Icons.auto_awesome),
+      (label: 'Donation', value: 'donation', icon: Icons.volunteer_activism),
     ];
 
-    return Row(
-      children: items.map((item) {
-        final isActive = _selectedCategory == item.value;
-        return Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: GestureDetector(
-            onTap: () => setState(() => _selectedCategory = item.value),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppColors.accent.withValues(alpha: 0.15)
-                    : isDark
-                        ? Colors.white10
-                        : AppColors.secondary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: items.map((item) {
+          final isActive = _selectedCategory == item.value;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedCategory = item.value),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
                   color: isActive
-                      ? AppColors.accent
-                      : Colors.transparent,
-                  width: 1.5,
+                      ? AppColors.accent.withValues(alpha: 0.15)
+                      : isDark
+                          ? Colors.white10
+                          : AppColors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isActive
+                        ? AppColors.accent
+                        : Colors.transparent,
+                    width: 1.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(item.icon,
+                        size: 16,
+                        color: isActive ? AppColors.accent : AppColors.muted),
+                    const SizedBox(width: 6),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: isActive ? AppColors.accent : AppColors.muted,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(item.icon,
-                      size: 16,
-                      color: isActive ? AppColors.accent : AppColors.muted),
-                  const SizedBox(width: 6),
-                  Text(
-                    item.label,
-                    style: TextStyle(
-                      color: isActive ? AppColors.accent : AppColors.muted,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -302,7 +335,7 @@ class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
   }
 
   Widget _buildWeeklyChart(
-      BuildContext context, List<int> data, int maxTasks, bool isDark) {
+      BuildContext context, List<int> data, double maxY, bool isDark) {
     final weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     return Container(
@@ -318,13 +351,13 @@ class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
-          maxY: (maxTasks > 0 ? maxTasks.toDouble() : 9) + 1,
+          maxY: maxY,
           barTouchData: BarTouchData(
             enabled: true,
             touchTooltipData: BarTouchTooltipData(
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                 return BarTooltipItem(
-                  '${data[group.x.toInt()]} tasks',
+                  _tooltipLabel(_selectedCategory, data[group.x.toInt()]),
                   TextStyle(
                     color: isDark ? Colors.white : Colors.black,
                     fontWeight: FontWeight.w600,
@@ -386,7 +419,7 @@ class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
 
   // ─── Monthly Line Chart (last 30 days) ──────────────────
   Widget _buildMonthlyChart(
-      BuildContext context, List<int> data, int maxTasks, bool isDark) {
+      BuildContext context, List<int> data, double maxY, bool isDark) {
     final now = DateTime.now();
 
     return Container(
@@ -402,7 +435,7 @@ class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
       ),
       child: LineChart(
         LineChartData(
-          maxY: (maxTasks > 0 ? maxTasks.toDouble() : 9) + 1,
+          maxY: maxY,
           minY: 0,
           lineTouchData: LineTouchData(
             enabled: true,
@@ -410,7 +443,7 @@ class _ActivityStatsScreenState extends State<ActivityStatsScreen> {
               getTooltipItems: (spots) => spots.map((spot) {
                 final date = now.subtract(Duration(days: 29 - spot.x.toInt()));
                 return LineTooltipItem(
-                  '${date.day}/${date.month}: ${spot.y.toInt()} tasks',
+                  '${date.day}/${date.month}: ${_tooltipLabel(_selectedCategory, spot.y.toInt())}',
                   TextStyle(
                     color: isDark ? Colors.white : Colors.black,
                     fontWeight: FontWeight.w600,

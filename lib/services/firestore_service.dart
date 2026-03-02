@@ -48,6 +48,59 @@ class FirestoreService {
     return UserModel.fromMap(query.docs.first.data());
   }
 
+  /// Search users by name prefix or exact email match.
+  /// Returns up to [limit] results (default 20).
+  Future<List<UserModel>> searchUsers(String query, {int limit = 20}) async {
+    if (query.trim().isEmpty) return [];
+
+    final trimmed = query.trim();
+    final results = <UserModel>[];
+    final seenIds = <String>{};
+
+    // 1. Search by email (exact match)
+    final emailSnap = await _db
+        .collection('users')
+        .where('email', isEqualTo: trimmed.toLowerCase())
+        .limit(1)
+        .get();
+    for (final doc in emailSnap.docs) {
+      final user = UserModel.fromMap(doc.data());
+      if (seenIds.add(user.id)) results.add(user);
+    }
+
+    // 2. Search by name prefix (case-sensitive Firestore range query)
+    // Query with original case
+    final nameEnd = '${trimmed.substring(0, trimmed.length - 1)}${String.fromCharCode(trimmed.codeUnitAt(trimmed.length - 1) + 1)}';
+    final nameSnap = await _db
+        .collection('users')
+        .where('name', isGreaterThanOrEqualTo: trimmed)
+        .where('name', isLessThan: nameEnd)
+        .limit(limit)
+        .get();
+    for (final doc in nameSnap.docs) {
+      final user = UserModel.fromMap(doc.data());
+      if (seenIds.add(user.id)) results.add(user);
+    }
+
+    // 3. Also try with first letter capitalized for common name patterns
+    final capitalized = trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
+    if (capitalized != trimmed) {
+      final capEnd = '${capitalized.substring(0, capitalized.length - 1)}${String.fromCharCode(capitalized.codeUnitAt(capitalized.length - 1) + 1)}';
+      final capSnap = await _db
+          .collection('users')
+          .where('name', isGreaterThanOrEqualTo: capitalized)
+          .where('name', isLessThan: capEnd)
+          .limit(limit)
+          .get();
+      for (final doc in capSnap.docs) {
+        final user = UserModel.fromMap(doc.data());
+        if (seenIds.add(user.id)) results.add(user);
+      }
+    }
+
+    return results.take(limit).toList();
+  }
+
   // ─── Tasks ─────────────────────────────────────────────
 
   Future<void> saveTasks(String uid, List<TaskModel> tasks) async {
@@ -277,5 +330,20 @@ class FirestoreService {
       friends.add(self);
     }
     return friends;
+  }
+
+  /// Fetch top users for a specific tier/league, ordered by points descending.
+  /// Returns up to [limit] users (default 100).
+  Future<List<UserModel>> getLeagueUsers(String tier, {int limit = 100}) async {
+    final snap = await _db
+        .collection('users')
+        .where('tier', isEqualTo: tier)
+        .orderBy('totalPoints', descending: true)
+        .limit(limit)
+        .get();
+
+    return snap.docs
+        .map((d) => UserModel.fromMap(d.data()))
+        .toList();
   }
 }

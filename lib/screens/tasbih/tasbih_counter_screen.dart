@@ -26,6 +26,91 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
   bool _isSoundEnabled = true;
   bool _isVibrationEnabled = true;
 
+  // Milestone targets
+  static const List<int> _milestones = [33, 66, 99];
+
+  /// Returns the current active target based on the count.
+  int _getCurrentTarget(int count) {
+    for (final milestone in _milestones) {
+      if (count < milestone) return milestone;
+    }
+    return _milestones.last; // Already past all milestones
+  }
+
+  /// Returns progress within the current milestone segment (0.0 to 1.0).
+  double _getMilestoneProgress(int count) {
+    if (count >= _milestones.last) return 1.0;
+    final target = _getCurrentTarget(count);
+    final prevTarget = _milestones.indexOf(target) > 0
+        ? _milestones[_milestones.indexOf(target) - 1]
+        : 0;
+    return ((count - prevTarget) / (target - prevTarget)).clamp(0.0, 1.0);
+  }
+
+  /// Shows a milestone reached snackbar.
+  void _showMilestoneReached(int milestone) {
+    if (!mounted) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    String message;
+    String emoji;
+    switch (milestone) {
+      case 33:
+        message = 'First target reached! Keep going to 66';
+        emoji = '🌟';
+        break;
+      case 66:
+        message = 'Second target reached! Almost at 99';
+        emoji = '⭐';
+        break;
+      case 99:
+        message = 'MashaAllah! All targets completed!';
+        emoji = '🏆';
+        break;
+      default:
+        return;
+    }
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$milestone Tasbih Complete!',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isDark ? const Color(0xFF3A3D42) : AppColors.accent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -79,7 +164,8 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
 
     final currentTask = tasbihTasks[_selectedIndex];
     final count = taskProvider.getTasbihCountToday(currentTask.id);
-    final progress = (count / currentTask.targetCount).clamp(0.0, 1.0);
+    final currentTarget = _getCurrentTarget(count);
+    final progress = _getMilestoneProgress(count);
     final totalCountSpecific = taskProvider.getTasbihTotalLifetimeCount(currentTask.id);
 
     return Scaffold(
@@ -193,39 +279,133 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
               ),
             ),
 
-            // ─── Progress Bar ───────────────────────────
+            // ─── Progress Bar with Milestones ────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 16, 28, 0),
-              child: Row(
+              child: Column(
                 children: [
-                  Text(
-                    'TARGET: ${currentTask.targetCount}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.secondary,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Container(
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.secondary.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: progress,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.accent,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                  Row(
+                    children: [
+                      Text(
+                        'TARGET: $currentTarget',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.secondary,
+                          letterSpacing: 1.0,
                         ),
                       ),
-                    ),
+                      if (count >= _milestones.last) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'ALL COMPLETE',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.accent,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      Text(
+                        '$count',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white.withValues(alpha: 0.5) : AppColors.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Segmented progress bar with 3 milestone sections
+                  Row(
+                    children: List.generate(_milestones.length, (i) {
+                      final milestoneCompleted = count >= _milestones[i];
+                      final isCurrentSegment = !milestoneCompleted &&
+                          (i == 0 || count >= _milestones[i - 1]);
+                      final segmentProgress = milestoneCompleted
+                          ? 1.0
+                          : isCurrentSegment
+                              ? progress
+                              : 0.0;
+
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: i < _milestones.length - 1 ? 4 : 0,
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.1)
+                                      : AppColors.secondary.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                                child: FractionallySizedBox(
+                                  alignment: Alignment.centerLeft,
+                                  widthFactor: segmentProgress,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: milestoneCompleted
+                                          ? AppColors.accent
+                                          : AppColors.accent.withValues(alpha: 0.8),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  if (milestoneCompleted)
+                                    Icon(
+                                      Icons.check_circle,
+                                      size: 10,
+                                      color: AppColors.accent,
+                                    )
+                                  else
+                                    Icon(
+                                      Icons.circle_outlined,
+                                      size: 10,
+                                      color: isDark
+                                          ? Colors.white.withValues(alpha: 0.3)
+                                          : AppColors.secondary.withValues(alpha: 0.4),
+                                    ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '${_milestones[i]}',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: milestoneCompleted
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: milestoneCompleted
+                                          ? AppColors.accent
+                                          : (isDark
+                                              ? Colors.white.withValues(alpha: 0.3)
+                                              : AppColors.secondary.withValues(alpha: 0.5)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -249,8 +429,16 @@ class _TasbihCounterScreenState extends State<TasbihCounterScreen>
                     // Increment tasbih
                     taskProvider.incrementTasbih(currentTask.id);
 
-                    // Check achievements
+                    // Check if a milestone was just reached
                     final newCount = taskProvider.getTasbihCountToday(currentTask.id);
+                    if (_milestones.contains(newCount)) {
+                      if (_isVibrationEnabled) {
+                        HapticFeedback.heavyImpact();
+                      }
+                      _showMilestoneReached(newCount);
+                    }
+
+                    // Check achievements
                     final achievementProvider = context.read<AchievementProvider>();
                     final points = await achievementProvider.checkAndUnlock(
                       context,

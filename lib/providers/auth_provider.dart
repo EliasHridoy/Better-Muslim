@@ -65,6 +65,9 @@ class AuthProvider extends ChangeNotifier {
           tier: 'Bronze',
         );
 
+        // Clear guest local data before entering user state
+        await LocalStorageService.clearUserData();
+
         // Sync local points to cloud
         await _firestoreService.updateUserPoints(
           user.uid,
@@ -107,6 +110,9 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (user != null) {
+        // Clear guest local data before entering user state
+        await LocalStorageService.clearUserData();
+
         _firebaseUser = user;
         await _loadUserModel(user.uid);
       }
@@ -162,11 +168,16 @@ class AuthProvider extends ChangeNotifier {
 
   // ─── Sign Out ──────────────────────────────────────────
   Future<void> signOut() async {
-    await _authService.signOut();
-    await LocalStorageService.clearUserData();
-    _firebaseUser = null;
-    _userModel = null;
-    notifyListeners();
+    try {
+      await _authService.signOut();
+      await LocalStorageService.clearUserData();
+      _firebaseUser = null;
+      _userModel = null;
+    } catch (e) {
+      debugPrint('Error during sign out: $e');
+    } finally {
+      notifyListeners();
+    }
   }
 
   // ─── Sync points to Firestore ──────────────────────────

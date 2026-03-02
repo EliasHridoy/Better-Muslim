@@ -286,6 +286,27 @@ class SyncService {
         }
       }
 
+      // Pull user points and durudh/fasting data
+      final userModel = await _firestoreService.getUser(userId);
+      if (userModel != null) {
+        await LocalStorageService.setTotalPoints(userModel.totalPoints);
+        LocalStorageService.clearDirty('points');
+        debugPrint('[SyncService] Pulled total points: ${userModel.totalPoints}');
+      }
+
+      // Pull today's durudh and fasting
+      final todayDurudh = await _firestoreService.getDurudhCount(userId, todayKey);
+      if (todayDurudh > 0) {
+        await LocalStorageService.setDurudhCount(todayKey, todayDurudh);
+        LocalStorageService.clearDirty('durudh_$todayKey');
+      }
+
+      final todayFasting = await _firestoreService.getFasting(userId, todayKey);
+      if (todayFasting) {
+        await LocalStorageService.setFasting(todayKey, todayFasting);
+        LocalStorageService.clearDirty('fasting_$todayKey');
+      }
+
       debugPrint('[SyncService] Cloud pull complete');
     } catch (e) {
       debugPrint('[SyncService] Cloud pull error: $e');

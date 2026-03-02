@@ -513,4 +513,44 @@ class TaskProvider with ChangeNotifier {
           .length;
     });
   }
+
+  // ─── Category-aware chart data (string key) ───────────
+  int _dayValue(DateTime day, String? category) {
+    final key = DateHelpers.dateKey(day);
+    switch (category) {
+      case 'prayer':
+        final ids = prayerTasks.map((t) => t.id).toSet();
+        return getEntriesForDate(day)
+            .where((e) => e.completed && ids.contains(e.taskId))
+            .length;
+      case 'tasbih':
+        // Sum of tasbih counts, NOT number of completed tasks
+        final ids = tasbihTasks.map((t) => t.id).toSet();
+        return getEntriesForDate(day)
+            .where((e) => ids.contains(e.taskId))
+            .fold<int>(0, (sum, e) => sum + e.count);
+      case 'siam':
+        return LocalStorageService.isFasting(key) ? 1 : 0;
+      case 'durood':
+        return LocalStorageService.getDurudhCount(key);
+      case 'donation':
+        return _charityEntries
+            .where((e) => DateHelpers.isSameDay(e.date, day))
+            .length;
+      default: // 'all' or null
+        return getEntriesForDate(day)
+            .where((e) => e.completed)
+            .length;
+    }
+  }
+
+  List<int> getWeeklyData({String? category}) {
+    return DateHelpers.getWeekDays().map((d) => _dayValue(d, category)).toList();
+  }
+
+  List<int> getMonthlyData({String? category}) {
+    final now = DateTime.now();
+    return List.generate(
+        30, (i) => _dayValue(now.subtract(Duration(days: 29 - i)), category));
+  }
 }

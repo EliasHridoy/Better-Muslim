@@ -40,12 +40,16 @@ class LocalStorageService {
     await _achievementsBox.clear();
     await _syncBox.clear();
 
-    final keys = _settingsBox.keys.toList();
-    for (final key in keys) {
-      if (key != 'dark_mode' && key != 'onboarding_complete') {
-        await _settingsBox.delete(key);
-      }
-    }
+    // Safely delete only user-specific settings
+    final keysToDelete = _settingsBox.keys.where((key) {
+      final k = key.toString();
+      return k == 'total_points' || k.startsWith('durudh_') || k.startsWith('fasting_');
+    }).toList();
+
+    await _settingsBox.deleteAll(keysToDelete);
+
+    // Explicitly reset to 0 right now to be double sure
+    await _settingsBox.put('total_points', 0);
   }
 
   // ─── Tasks ─────────────────────────────────────────────
