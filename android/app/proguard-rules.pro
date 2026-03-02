@@ -18,3 +18,7 @@
 
 # Keep our app classes
 -keep class com.bettermuslim.better_muslim.** { *; }
+
+# Fix R8 missing classes for deferred components / Play features
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }
