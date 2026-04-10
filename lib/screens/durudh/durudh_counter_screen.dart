@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import 'package:provider/provider.dart';
@@ -21,8 +22,38 @@ class _DurudhCounterScreenState extends State<DurudhCounterScreen>
   int _remainingSeconds = 0;
   Timer? _timer;
   late AnimationController _pulseController;
+  final PageController _pageController = PageController();
+  int _currentDurudhIndex = 0;
 
   final _durations = [1, 3, 5];
+
+  final List<Map<String, String>> _durudhTexts = [
+    {
+      'arabic': 'صَلَّىٰ ٱللَّٰهُ عَلَيْهِ وَسَلَّمَ',
+      'pronunciation': 'Sal-lal-laa-hu ‘alay-hi wa-sal-lam',
+      'meaning': 'May the peace and blessings of Allah be upon him',
+    },
+    {
+      'arabic': 'اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ',
+      'pronunciation': 'Al-laa-hum-ma sal-li ‘a-laa Mu-ham-mad',
+      'meaning': 'O Allah, send blessings upon Muhammad.',
+    },
+    {
+      'arabic': 'اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَعَلَىٰ آلِ مُحَمَّدٍ',
+      'pronunciation': 'Al-laa-hum-ma sal-li ‘a-laa Mu-ham-mad-iw wa-‘a-laa aa-li Mu-ham-mad',
+      'meaning': 'O Allah, send blessings upon Muhammad and upon the family of Muhammad',
+    },
+    {
+      'arabic': 'اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَىٰ نَبِيِّنَا مُحَمَّدٍ',
+      'pronunciation': 'Al-laa-hum-ma sal-li wa-sal-lim ‘a-laa na-biy-yi-naa Mu-ham-mad',
+      'meaning': 'O Allah, send Your blessings and peace upon our Prophet Muhammad.',
+    },
+    {
+      'arabic': 'صَلَّىٰ ٱللّٰهُ عَلَىٰ النَّبِيِّ مُحَمَّدٍ',
+      'pronunciation': 'Sal-lal-laa-hu ‘a-lan-na-biy-yi Mu-ham-mad',
+      'meaning': 'Allah\'s blessings be upon the Prophet Muhammad.',
+    },
+  ];
 
   @override
   void initState() {
@@ -40,6 +71,7 @@ class _DurudhCounterScreenState extends State<DurudhCounterScreen>
   void dispose() {
     _timer?.cancel();
     _pulseController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -65,10 +97,80 @@ class _DurudhCounterScreenState extends State<DurudhCounterScreen>
     setState(() => _isRunning = false);
   }
 
-  void _tap() async {
+  void _spawnFloatingText(Offset globalPosition, String text, Color color) {
+    final overlayState = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+    final random = Random();
+
+    // Start at tapping position
+    // final startX = globalPosition.dx - 60 + (random.nextDouble() - 0.5) * 40;
+    // final startY = globalPosition.dy - 80 + (random.nextDouble() - 0.5) * 20;
+    final startX = globalPosition.dx - 20;
+    final startY = globalPosition.dy - 50;
+
+    // Random direction where it floats
+    final floatDistanceX = (random.nextDouble() - 0.5) * 120.0;
+    final floatDistanceY = -150.0 - random.nextDouble() * 100.0;
+
+    // Slight random rotation for style
+    final rotation = (random.nextDouble() - 0.5) * 0.5;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) {
+        return Positioned(
+          left: startX,
+          top: startY,
+          child: Material(
+            color: Colors.transparent,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 5000),
+              curve: Curves.easeOutCubic,
+              onEnd: () {
+                overlayEntry.remove();
+                overlayEntry.dispose();
+              },
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(floatDistanceX * value, floatDistanceY * value),
+                  child: Transform.rotate(
+                    angle: rotation * value,
+                    child: Opacity(
+                      // Fade in fast, then fade out
+                      opacity: value < 0.1 ? (value * 10) : (1.0 - ((value - 0.1) / 0.9)),
+                      child: child!,
+                    ),
+                  ),
+                );
+              },
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12 + random.nextDouble() * 8, // slight size variation
+                  fontWeight: FontWeight.w900,
+                  shadows: const [
+                    Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlayState.insert(overlayEntry);
+  }
+
+  void _tap(Offset globalPosition) async {
     if (!_isRunning) return;
     setState(() => _count++);
     _pulseController.reverse().then((_) => _pulseController.forward());
+
+    _spawnFloatingText(globalPosition, '🍂 -10 Sins', Colors.redAccent.shade100);
+    _spawnFloatingText(globalPosition, '🤍 +10 Bless', Colors.greenAccent.shade100);
+    _spawnFloatingText(globalPosition, '👑 +10 Ranks', Colors.amberAccent);
 
     final provider = context.read<TaskProvider>();
     provider.incrementDurudh();
@@ -119,7 +221,7 @@ class _DurudhCounterScreenState extends State<DurudhCounterScreen>
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkCard : Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -130,29 +232,113 @@ class _DurudhCounterScreenState extends State<DurudhCounterScreen>
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ',
-                      textAlign: TextAlign.center,
-                      textDirection: TextDirection.rtl,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontFamily: 'serif',
-                        fontSize: 22,
-                        height: 1.8,
+                    SizedBox(
+                      height: 170, // Fixed height for slider
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentDurudhIndex = index;
+                          });
+                        },
+                        itemCount: _durudhTexts.length,
+                        itemBuilder: (context, index) {
+                          final text = _durudhTexts[index];
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  text['arabic']!,
+                                  textAlign: TextAlign.center,
+                                  textDirection: TextDirection.rtl,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontFamily: 'serif',
+                                    fontSize: 22,
+                                    height: 1.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  text['pronunciation']!,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  text['meaning']!,
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.muted,
+                                    fontStyle: FontStyle.italic,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'O Allah, send blessings upon Muhammad\nand upon the family of Muhammad',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.muted,
-                        fontStyle: FontStyle.italic,
-                        height: 1.4,
+                    const SizedBox(height: 16),
+                    // Indication dots
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        _durudhTexts.length,
+                        (index) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: _currentDurudhIndex == index ? 20 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _currentDurudhIndex == index
+                                ? AppColors.accent
+                                : (isDark ? Colors.white24 : Colors.black12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // ─── Stats Cards ──────────────────────────────
+            Consumer<TaskProvider>(
+              builder: (context, provider, child) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          context,
+                          'Today',
+                          provider.durudhCountToday,
+                          isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildStatCard(
+                          context,
+                          'Lifetime',
+                          provider.totalDurudhLifetimeCount,
+                          isDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 24),
 
@@ -262,7 +448,8 @@ class _DurudhCounterScreenState extends State<DurudhCounterScreen>
 
                     // ─── Tap Circle ───────────────────────────
                     GestureDetector(
-                      onTap: _isRunning ? _tap : _start,
+                      onTapDown: _isRunning ? (details) => _tap(details.globalPosition) : null,
+                      onTap: _isRunning ? () {} : _start,
                       child: ScaleTransition(
                         scale: _pulseController,
                         child: Container(
@@ -373,6 +560,39 @@ class _DurudhCounterScreenState extends State<DurudhCounterScreen>
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(BuildContext context, String title, int count, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: isDark
+            ? null
+            : Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.muted,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            count.toString(),
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w800,
+                ),
           ),
         ],
       ),

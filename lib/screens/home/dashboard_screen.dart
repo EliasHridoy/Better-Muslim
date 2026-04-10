@@ -277,49 +277,127 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    // Filter to standard 5 prayers + highlight current
+    // Filter to standard 5 prayers
     final standardPrayers = provider.prayerTimes.where((p) {
       final n = p.name.toLowerCase();
       return n == 'fajr' || n == 'dhuhr' || n == 'asr' || n == 'maghrib' || n == 'isha';
     }).toList();
 
+    final now = DateTime.now();
+    final currentMinutes = now.hour * 60 + now.minute;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: standardPrayers.map((prayer) {
-        final isCurrent = provider.currentPrayer?.name == prayer.name;
+        final n = prayer.name.toLowerCase();
+        
+        String endTimeStr = '--:--';
+        int endMinutes = 0;
+        final startMinutes = prayer.time.hour * 60 + prayer.time.minute;
+
+        try {
+          if (n == 'fajr') {
+            final p = provider.prayerTimes.firstWhere((p) => p.name.toLowerCase() == 'sunrise');
+            endTimeStr = p.formatted;
+            endMinutes = p.time.hour * 60 + p.time.minute;
+          } else if (n == 'dhuhr') {
+            final p = provider.prayerTimes.firstWhere((p) => p.name.toLowerCase() == 'asr');
+            endTimeStr = p.formatted;
+            endMinutes = p.time.hour * 60 + p.time.minute;
+          } else if (n == 'asr') {
+            final p = provider.prayerTimes.firstWhere((p) => p.name.toLowerCase() == 'maghrib');
+            endTimeStr = p.formatted;
+            endMinutes = p.time.hour * 60 + p.time.minute;
+          } else if (n == 'maghrib') {
+            final p = provider.prayerTimes.firstWhere((p) => p.name.toLowerCase() == 'isha');
+            endTimeStr = p.formatted;
+            endMinutes = p.time.hour * 60 + p.time.minute;
+          } else if (n == 'isha') {
+            final p = provider.prayerTimes.firstWhere((p) => p.name.toLowerCase() == 'fajr');
+            endTimeStr = p.formatted;
+            endMinutes = p.time.hour * 60 + p.time.minute;
+          }
+        } catch (e) {
+          // Fallback if not found
+        }
+
+        bool isCurrent = false;
+        if (n == 'isha') {
+           if (currentMinutes >= startMinutes || currentMinutes < endMinutes) {
+              isCurrent = true;
+           }
+        } else {
+           if (currentMinutes >= startMinutes && currentMinutes < endMinutes) {
+              isCurrent = true;
+           }
+        }
+
+        final cardBgColor = isCurrent 
+            ? stitchPrimary 
+            : (isDark ? const Color(0xFF1E293B) : Colors.white);
+            
+        final borderColor = isCurrent 
+            ? Colors.transparent 
+            : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05));
+            
+        final mainTextColor = isCurrent
+            ? const Color(0xFF10221F)
+            : (isDark ? Colors.white : const Color(0xFF0F172A));
+            
+        final subTextColor = isCurrent
+            ? const Color(0xFF10221F).withValues(alpha: 0.7)
+            : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B));
 
         return Expanded(
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
             decoration: BoxDecoration(
-              color: isCurrent ? stitchPrimary : stitchPrayerCardBg,
+              color: cardBgColor,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: Column(
               children: [
+                Icon(
+                  prayer.icon,
+                  size: 18,
+                  color: mainTextColor,
+                ),
+                const SizedBox(height: 4),
                 Text(
                   prayer.name.toUpperCase(),
                   style: TextStyle(
-                    color: isCurrent ? const Color(0xFF10221F) : stitchPrayerCardText,
-                    fontSize: 10,
+                    color: mainTextColor,
+                    fontSize: 9,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.2,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   prayer.formatted,
                   style: TextStyle(
-                    color: isCurrent ? const Color(0xFF10221F).withValues(alpha: 0.9) : stitchPrayerCardText.withValues(alpha: 0.9),
+                    color: mainTextColor.withValues(alpha: 0.9),
                     fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  endTimeStr,
+                  style: TextStyle(
+                    color: subTextColor,
+                    fontSize: 9,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

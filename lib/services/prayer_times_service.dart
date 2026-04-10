@@ -76,10 +76,20 @@ class PrayerTimesService {
     final hour = int.tryParse(parts[0]) ?? 0;
     final minute = int.tryParse(parts[1]) ?? 0;
 
+    String period = 'AM';
+    int hour12 = hour;
+    if (hour >= 12) {
+      period = 'PM';
+      if (hour > 12) hour12 -= 12;
+    }
+    if (hour12 == 0) hour12 = 12;
+    
+    final formatted12h = '${hour12.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
+
     return PrayerTime(
       name: name,
       time: TimeOfDay(hour: hour, minute: minute),
-      formatted: clean,
+      formatted: formatted12h,
       icon: icon,
     );
   }
@@ -89,32 +99,32 @@ class PrayerTimesService {
       const PrayerTime(
           name: 'Fajr',
           time: TimeOfDay(hour: 5, minute: 0),
-          formatted: '05:00',
+          formatted: '05:00 AM',
           icon: Icons.nights_stay_rounded),
       const PrayerTime(
           name: 'Sunrise',
           time: TimeOfDay(hour: 6, minute: 15),
-          formatted: '06:15',
+          formatted: '06:15 AM',
           icon: Icons.wb_twilight_rounded),
       const PrayerTime(
           name: 'Dhuhr',
           time: TimeOfDay(hour: 12, minute: 30),
-          formatted: '12:30',
+          formatted: '12:30 PM',
           icon: Icons.wb_sunny_rounded),
       const PrayerTime(
           name: 'Asr',
           time: TimeOfDay(hour: 15, minute: 45),
-          formatted: '15:45',
+          formatted: '03:45 PM',
           icon: Icons.sunny_snowing),
       const PrayerTime(
           name: 'Maghrib',
           time: TimeOfDay(hour: 18, minute: 15),
-          formatted: '18:15',
+          formatted: '06:15 PM',
           icon: Icons.wb_twilight_rounded),
       const PrayerTime(
           name: 'Isha',
           time: TimeOfDay(hour: 19, minute: 45),
-          formatted: '19:45',
+          formatted: '07:45 PM',
           icon: Icons.dark_mode_rounded),
     ];
   }
